@@ -7,7 +7,7 @@ from langchain_core.output_parsers import PydanticOutputParser
 from langchain.agents import create_tool_calling_agent, AgentExecutor
 from pydantic import BaseModel
 from typing import List, Tuple
-from tools import search_tool, wiki_tool, save_tool, calculator_tool, content_generator_tool, unit_converter_tool, time_tool, file_reader_tool
+from tools import search_tool, wiki_tool, save_tool, calculator_tool, content_generator_tool, unit_converter_tool, time_tool, file_reader_tool, code_execution_tool, translation_tool
 import re
 
 load_dotenv()
@@ -37,8 +37,11 @@ prompt = ChatPromptTemplate.from_messages(
         (
             "system",
             """
-            You are a versatile AI assistant capable of handling a wide range of tasks, including answering questions, performing calculations, generating content, conducting research, unit conversions, and time zone queries.
+            You are a versatile AI assistant capable of handling a wide range of tasks, including answering questions, performing calculations, generating content, conducting research, unit conversions, time zone queries, reading files, executing Python code, and translating text.
             Use the provided tools when necessary and tailor your response to the user's query.
+            - For file reading, use the FileReader tool with the provided file path.
+            - For code execution, use the CodeExecutor tool to run Python code and return results or errors.
+            - For translation, use the Translator tool to translate text into English or a specified language (e.g., 'translate to Spanish').
             For research tasks, include sources if applicable.
             Use the conversation history to provide context-aware responses.
             **Output only a valid JSON object in the format specified below. Do not include any additional text, comments, or tags like <think> outside the JSON.**
@@ -67,9 +70,11 @@ all_tools = [
     content_generator_tool,
     unit_converter_tool,
     time_tool,
-    file_reader_tool
+    file_reader_tool,
+    code_execution_tool,
+    translation_tool
 ]
-tool_names = ["Search", "Wiki", "Save", "Calculator", "Content Generator", "Unit Converter", "Time Zone","File Reader"]
+tool_names = ["Search", "Wiki", "Save", "Calculator", "Content Generator", "Unit Converter", "Time Zone", "File Reader", "Code Executor", "Translator"]
 
 # Initialize agent
 llm = llm.bind_tools(all_tools)
@@ -104,7 +109,7 @@ def format_chat_history(history):
             formatted.append(AIMessage(content=message))
     return formatted
 
-def run_agent(prompt_input, search_cb, wiki_cb, save_cb, calculator_cb, content_generator_cb, unit_converter_cb, time_cb, file_reader_cb, history):
+def run_agent(prompt_input, search_cb, wiki_cb, save_cb, calculator_cb, content_generator_cb, unit_converter_cb, time_cb, file_reader_cb, code_executor_cb, translator_cb, uploaded_file, history):
     selected_tools = []
     if search_cb:
         selected_tools.append("Search")
@@ -122,6 +127,16 @@ def run_agent(prompt_input, search_cb, wiki_cb, save_cb, calculator_cb, content_
         selected_tools.append("Time Zone")
     if file_reader_cb:
         selected_tools.append("File Reader")
+    if code_executor_cb:
+        selected_tools.append("Code Executor")
+    if translator_cb:
+        selected_tools.append("Translator")
+
+    # Handle file upload for FileReader
+    file_path = None
+    if file_reader_cb and uploaded_file:
+        file_path = uploaded_file
+        prompt_input = f"{prompt_input}\nFile path: {file_path}"
 
     formatted_history = format_chat_history(history)
     try:
@@ -140,7 +155,7 @@ def run_agent(prompt_input, search_cb, wiki_cb, save_cb, calculator_cb, content_
         return error_msg, "No summary available due to error.", history
 
 def clear_inputs():
-    return "", False, False, False, False, False, False, False, False, []
+    return "", False, False, False, False, False, False, False, False, False, False, None, []
 
 # Define custom Gradio theme
 custom_theme = gr.themes.Soft(
@@ -165,7 +180,7 @@ with gr.Blocks(theme=custom_theme, css=".gradio-container {max-width: 1200px; ma
     gr.Markdown(
         """
         # GPA-Qwen Enhanced
-        A versatile AI assistant for research, calculations, content generation, and more. Enter your query and select tools to get started.
+        A versatile AI assistant for research, calculations, content generation, file reading, code execution, translation, and more. Enter your query, select tools, and upload files if needed.
         """
     )
     history = gr.State(value=[])
@@ -174,7 +189,7 @@ with gr.Blocks(theme=custom_theme, css=".gradio-container {max-width: 1200px; ma
         with gr.Column(scale=1):
             prompt_input = gr.Textbox(
                 label="Enter Your Query",
-                placeholder="e.g., 'Research the history of AI' or 'Convert 10 km to miles'",
+                placeholder="e.g., 'Read my file' or 'Execute this Python code: print(2+2)' or 'Translate hello to Spanish'",
                 lines=5,
                 show_label=True
             )
@@ -188,7 +203,10 @@ with gr.Blocks(theme=custom_theme, css=".gradio-container {max-width: 1200px; ma
                         calculator_cb = gr.Checkbox(label="Calculator", value=False, info="Perform mathematical calculations")
                         unit_converter_cb = gr.Checkbox(label="Unit Converter", value=False, info="Convert between units")
                         time_cb = gr.Checkbox(label="Time Zone", value=False, info="Get time in a specific timezone")
-                        file_reader_cb = gr.Checkbox(label="File Reader", value=False, info="Attach and Read files")
+                        file_reader_cb = gr.Checkbox(label="File Reader", value=False, info="Read contents of an uploaded file")
+                        code_executor_cb = gr.Checkbox(label="Code Executor", value=False, info="Execute Python code")
+                        translator_cb = gr.Checkbox(label="Translator", value=False, info="Translate text to English or specified language")
+                file_upload = gr.File(label="Upload File for File Reader", file_types=[".txt"], visible=True)
             
             with gr.Row():
                 submit_btn = gr.Button("Submit", variant="primary")
@@ -197,7 +215,7 @@ with gr.Blocks(theme=custom_theme, css=".gradio-container {max-width: 1200px; ma
         with gr.Column(scale=2):
             with gr.Tabs():
                 with gr.Tab("Summary"):
-                    summary_output = gr.Textbox(label="Summary", lines=10, placeholder="Main output goes here...",  show_label=False)
+                    summary_output = gr.Textbox(label="Summary", lines=10, placeholder="Main output goes here...", show_label=False)
                 with gr.Tab("Thoughts"):
                     thoughts_output = gr.Textbox(label="Thoughts", lines=10, placeholder="Thoughts go here...", show_label=False)
     
@@ -211,13 +229,13 @@ with gr.Blocks(theme=custom_theme, css=".gradio-container {max-width: 1200px; ma
 
     submit_btn.click(
         run_agent,
-        inputs=[prompt_input, search_cb, wiki_cb, save_cb, calculator_cb, content_generator_cb, unit_converter_cb, time_cb, file_reader_cb, history],
+        inputs=[prompt_input, search_cb, wiki_cb, save_cb, calculator_cb, content_generator_cb, unit_converter_cb, time_cb, file_reader_cb, code_executor_cb, translator_cb, file_upload, history],
         outputs=[thoughts_output, summary_output, history]
     )
     clear_btn.click(
         clear_inputs,
         inputs=[],
-        outputs=[prompt_input, search_cb, wiki_cb, save_cb, calculator_cb, content_generator_cb, unit_converter_cb, time_cb, file_reader_cb, history]
+        outputs=[prompt_input, search_cb, wiki_cb, save_cb, calculator_cb, content_generator_cb, unit_converter_cb, time_cb, file_reader_cb, code_executor_cb, translator_cb, file_upload, history]
     )
 
 # Launch the app
