@@ -9,7 +9,8 @@ GPA-Qwen is an advanced AI assistant designed to help users with a wide range of
 
 **Features:**
 
-1.Multi-Tool Support
+1.Multi-Tool Support:
+
 GPA-Qwen utilizes a variety of tools to enhance its functionality. These include:
 
 - Search: For finding information online.
