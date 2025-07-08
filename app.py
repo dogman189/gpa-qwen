@@ -95,10 +95,9 @@ def run_agent(prompt_input, search_enabled, wiki_enabled, save_enabled, calculat
     try:
         response = agent_executor.invoke({"query": prompt_input})
         thoughts = format_intermediate_steps(response["intermediate_steps"])
-        # Parse the output to extract the structured response
         structured_response = parser.parse(response["output"])
         summary = f"Response: {structured_response.response}\nTools Used: {', '.join(structured_response.tools_used) or 'None'}\nSources: {', '.join(structured_response.sources) or 'None'}"
-        print(f"Debug - Thoughts: {thoughts[:100]}...")  # Truncated for brevity
+        print(f"Debug - Thoughts: {thoughts[:100]}...")
         print(f"Debug - Summary: {summary[:100]}...")
         return thoughts, summary
     except Exception as e:
@@ -106,9 +105,10 @@ def run_agent(prompt_input, search_enabled, wiki_enabled, save_enabled, calculat
         print(error_msg)
         return error_msg, "No summary available due to error."
 
-# Define the Gradio interface
-with gr.Blocks() as demo:
-    gr.Markdown("# GPA-Qwen")
+
+with gr.Blocks(theme=gr.themes.Default(primary_hue=gr.themes.colors.red, secondary_hue=gr.themes.colors.pink)) as demo:
+    ...
+    gr.Markdown("# GPA-Qwen", elem_id="title")
     with gr.Row():
         with gr.Column():
             prompt_input = gr.Textbox(label="Enter your prompt", placeholder="Type your query here...")
