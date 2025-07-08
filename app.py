@@ -1,5 +1,6 @@
 import gradio as gr
 from dotenv import load_dotenv
+from typing import List, Tuple, Union
 from langchain_openai import ChatOpenAI
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import PydanticOutputParser
@@ -78,14 +79,17 @@ def format_intermediate_steps(steps):
         formatted += f"Step {i}:\nAction: {action.tool}\nInput: {action.tool_input}\nObservation: {observation}\n\n"
     return formatted
 
-# Function to format chat history
-def format_chat_history(history: List[Tuple[str, str]]) -> str:
-    if not history:
-        return ""
-    formatted = ""
+from langchain_core.messages import HumanMessage, AIMessage
+
+# Function to format chat history as LangChain messages
+def format_chat_history(history: List[Tuple[str, str]]) -> List[Union[HumanMessage, AIMessage]]:
+    messages = []
     for role, content in history:
-        formatted += f"{role}: {content}\n"
-    return formatted
+        if role.lower() == "human":
+            messages.append(HumanMessage(content=content))
+        elif role.lower() == "assistant":
+            messages.append(AIMessage(content=content))
+    return messages
 
 # Function to run the agent
 def run_agent(prompt_input, search_enabled, wiki_enabled, save_enabled, calculator_enabled, content_generator_enabled, unit_converter_enabled, time_enabled, history: List[Tuple[str, str]]):
@@ -105,13 +109,29 @@ def run_agent(prompt_input, search_enabled, wiki_enabled, save_enabled, calculat
     if time_enabled:
         selected_tools.append(time_tool)
     
-    # Format chat history for the prompt
+    # Convert history to LangChain messages
     formatted_history = format_chat_history(history)
     
     llm_bound = llm.bind_tools(selected_tools)
     agent = create_tool_calling_agent(llm=llm_bound, prompt=prompt, tools=selected_tools)
     agent_executor = AgentExecutor(agent=agent, tools=selected_tools, verbose=True, return_intermediate_steps=True)
     
+    try:
+        response = agent_executor.invoke({"query": prompt_input, "chat_history": formatted_history})
+        thoughts = format_intermediate_steps(response["intermediate_steps"])
+        # Parse the output to extract the structured response
+        structured_response = parser.parse(response["output"])
+        # Format summary as Markdown
+        summary = f"**Response:** {structured_response.response}\n\n**Tools Used:** {', '.join(structured_response.tools_used) or 'None'}\n\n**Sources:** {', '.join(structured_response.sources) or 'None'}"
+        print(f"Debug - Thoughts: {thoughts[:100]}...")
+        print(f"Debug - Summary: {summary[:100]}...")
+        # Update history
+        updated_history = history + [("human", prompt_input), ("assistant", structured_response.response)]
+        return thoughts, summary, updated_history
+    except Exception as e:
+        error_msg = f"Error during agent execution: {str(e)}"
+        print(error_msg)
+        return error_msg, "No summary available due to error.", history
     try:
         response = agent_executor.invoke({"query": prompt_input, "chat_history": formatted_history})
         thoughts = format_intermediate_steps(response["intermediate_steps"])
@@ -147,8 +167,8 @@ with gr.Blocks() as demo:
                 time_cb = gr.Checkbox(label="Time Zone", value=False)
             submit_btn = gr.Button("Submit")
         with gr.Column():
-            thoughts_output = gr.Textbox(label="Thoughts", lines=10)
-            summary_output = gr.Markdown(label="Summary")
+            thoughts_output = gr.Textbox(label="Thoughts", lines=5)
+            summary_output = gr.Textbox(label="Summary", lines=5)
     
     submit_btn.click(
         run_agent,
