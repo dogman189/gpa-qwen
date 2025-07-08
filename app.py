@@ -7,7 +7,7 @@ from langchain_core.output_parsers import PydanticOutputParser
 from langchain.agents import create_tool_calling_agent, AgentExecutor
 from pydantic import BaseModel
 from typing import List, Tuple
-from tools import search_tool, wiki_tool, save_tool, calculator_tool, content_generator_tool, unit_converter_tool, time_tool
+from tools import search_tool, wiki_tool, save_tool, calculator_tool, content_generator_tool, unit_converter_tool, time_tool, file_reader_tool
 import re
 
 load_dotenv()
@@ -66,9 +66,10 @@ all_tools = [
     calculator_tool,
     content_generator_tool,
     unit_converter_tool,
-    time_tool
+    time_tool,
+    file_reader_tool
 ]
-tool_names = ["Search", "Wiki", "Save", "Calculator", "Content Generator", "Unit Converter", "Time Zone"]
+tool_names = ["Search", "Wiki", "Save", "Calculator", "Content Generator", "Unit Converter", "Time Zone","File Reader"]
 
 # Initialize agent
 llm = llm.bind_tools(all_tools)
@@ -103,7 +104,7 @@ def format_chat_history(history):
             formatted.append(AIMessage(content=message))
     return formatted
 
-def run_agent(prompt_input, search_cb, wiki_cb, save_cb, calculator_cb, content_generator_cb, unit_converter_cb, time_cb, history):
+def run_agent(prompt_input, search_cb, wiki_cb, save_cb, calculator_cb, content_generator_cb, unit_converter_cb, time_cb, file_reader_cb, history):
     selected_tools = []
     if search_cb:
         selected_tools.append("Search")
@@ -119,6 +120,8 @@ def run_agent(prompt_input, search_cb, wiki_cb, save_cb, calculator_cb, content_
         selected_tools.append("Unit Converter")
     if time_cb:
         selected_tools.append("Time Zone")
+    if file_reader_cb:
+        selected_tools.append("File Reader")
 
     formatted_history = format_chat_history(history)
     try:
@@ -137,7 +140,7 @@ def run_agent(prompt_input, search_cb, wiki_cb, save_cb, calculator_cb, content_
         return error_msg, "No summary available due to error.", history
 
 def clear_inputs():
-    return "", False, False, False, False, False, False, False, []
+    return "", False, False, False, False, False, False, False, False, []
 
 # Define custom Gradio theme
 custom_theme = gr.themes.Soft(
@@ -182,10 +185,10 @@ with gr.Blocks(theme=custom_theme, css=".gradio-container {max-width: 1200px; ma
                         wiki_cb = gr.Checkbox(label="Wiki", value=False, info="Query Wikipedia for details")
                         save_cb = gr.Checkbox(label="Save", value=False, info="Save output to a text file")
                         content_generator_cb = gr.Checkbox(label="Content Generator", value=False, info="Generate creative content")
-                    with gr.Column(scale=1):
                         calculator_cb = gr.Checkbox(label="Calculator", value=False, info="Perform mathematical calculations")
                         unit_converter_cb = gr.Checkbox(label="Unit Converter", value=False, info="Convert between units")
                         time_cb = gr.Checkbox(label="Time Zone", value=False, info="Get time in a specific timezone")
+                        file_reader_cb = gr.Checkbox(label="File Reader", value=False, info="Attach and Read files")
             
             with gr.Row():
                 submit_btn = gr.Button("Submit", variant="primary")
@@ -208,13 +211,13 @@ with gr.Blocks(theme=custom_theme, css=".gradio-container {max-width: 1200px; ma
 
     submit_btn.click(
         run_agent,
-        inputs=[prompt_input, search_cb, wiki_cb, save_cb, calculator_cb, content_generator_cb, unit_converter_cb, time_cb, history],
+        inputs=[prompt_input, search_cb, wiki_cb, save_cb, calculator_cb, content_generator_cb, unit_converter_cb, time_cb, file_reader_cb, history],
         outputs=[thoughts_output, summary_output, history]
     )
     clear_btn.click(
         clear_inputs,
         inputs=[],
-        outputs=[prompt_input, search_cb, wiki_cb, save_cb, calculator_cb, content_generator_cb, unit_converter_cb, time_cb, history]
+        outputs=[prompt_input, search_cb, wiki_cb, save_cb, calculator_cb, content_generator_cb, unit_converter_cb, time_cb, file_reader_cb, history]
     )
 
 # Launch the app

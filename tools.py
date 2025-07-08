@@ -3,9 +3,62 @@ from langchain_community.utilities import WikipediaAPIWrapper
 from langchain.tools import Tool
 from datetime import datetime
 import math
+import os
+import traceback
+from langchain.tools import Tool
+from googletrans import Translator
 from sympy import sympify
 import pint
 import pytz
+
+
+# 1. File Reader Tool
+def read_file(filepath: str) -> str:
+    if not os.path.exists(filepath):
+        return f"File not found: {filepath}"
+    try:
+        with open(filepath, "r", encoding="utf-8") as file:
+            return file.read()
+    except Exception as e:
+        return f"Error reading file: {str(e)}"
+
+file_reader_tool = Tool(
+    name="FileReader",
+    func=read_file,
+    description="Reads and returns the contents of a text file. Input should be a valid file path."
+)
+
+# 4. Code Execution Tool
+def run_python_code(code: str) -> str:
+    local_vars = {}
+    try:
+        exec(code, {}, local_vars)
+        return str(local_vars) if local_vars else "Code executed successfully."
+    except Exception:
+        return f"Error:\n{traceback.format_exc()}"
+
+code_execution_tool = Tool(
+    name="CodeExecutor",
+    func=run_python_code,
+    description="Executes a block of Python code and returns output variables or errors."
+)
+
+# 5. Translation Tool
+translator = Translator()
+
+def translate_text(text: str, target_language: str = "en") -> str:
+    try:
+        result = translator.translate(text, dest=target_language)
+        return result.text
+    except Exception as e:
+        return f"Translation error: {str(e)}"
+
+translation_tool = Tool(
+    name="Translator",
+    func=lambda x: translate_text(x),
+    description="Translates text into English. Input should be text in any language."
+)
+
 
 # Initialize pint unit registry
 ureg = pint.UnitRegistry()
