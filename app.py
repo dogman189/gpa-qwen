@@ -5,7 +5,8 @@ from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import PydanticOutputParser
 from langchain.agents import create_tool_calling_agent, AgentExecutor
 from pydantic import BaseModel
-from tools import search_tool, wiki_tool, save_tool, calculator_tool, content_generator_tool
+from typing import List, Tuple
+from tools import search_tool, wiki_tool, save_tool, calculator_tool, content_generator_tool, unit_converter_tool, time_tool
 
 load_dotenv()
 
@@ -28,15 +29,16 @@ llm = ChatOpenAI(
 # Define the parser
 parser = PydanticOutputParser(pydantic_object=TaskResponse)
 
-# Define the prompt
+# Define the prompt with chat history
 prompt = ChatPromptTemplate.from_messages(
     [
         (
             "system",
             """
-            You are a versatile AI assistant capable of handling a wide range of tasks, including answering questions, performing calculations, generating content, and conducting research.
+            You are a versatile AI assistant capable of handling a wide range of tasks, including answering questions, performing calculations, generating content, conducting research, unit conversions, and time zone queries.
             Use the provided tools when necessary and tailor your response to the user's query.
             For research tasks, include sources if applicable.
+            Use the conversation history to provide context-aware responses.
             Wrap the output in this format and provide no other text\n{format_instructions}
             """,
         ),
@@ -59,9 +61,11 @@ all_tools = [
     wiki_tool,
     save_tool,
     calculator_tool,
-    content_generator_tool
+    content_generator_tool,
+    unit_converter_tool,
+    time_tool
 ]
-tool_names = ["Search", "Wiki", "Save", "Calculator", "Content Generator"]
+tool_names = ["Search", "Wiki", "Save", "Calculator", "Content Generator", "Unit Converter", "Time Zone"]
 
 # Function to format intermediate steps
 def format_intermediate_steps(steps):
@@ -74,8 +78,17 @@ def format_intermediate_steps(steps):
         formatted += f"Step {i}:\nAction: {action.tool}\nInput: {action.tool_input}\nObservation: {observation}\n\n"
     return formatted
 
+# Function to format chat history
+def format_chat_history(history: List[Tuple[str, str]]) -> str:
+    if not history:
+        return ""
+    formatted = ""
+    for role, content in history:
+        formatted += f"{role}: {content}\n"
+    return formatted
+
 # Function to run the agent
-def run_agent(prompt_input, search_enabled, wiki_enabled, save_enabled, calculator_enabled, content_generator_enabled):
+def run_agent(prompt_input, search_enabled, wiki_enabled, save_enabled, calculator_enabled, content_generator_enabled, unit_converter_enabled, time_enabled, history: List[Tuple[str, str]]):
     selected_tools = []
     if search_enabled:
         selected_tools.append(search_tool)
@@ -87,28 +100,40 @@ def run_agent(prompt_input, search_enabled, wiki_enabled, save_enabled, calculat
         selected_tools.append(calculator_tool)
     if content_generator_enabled:
         selected_tools.append(content_generator_tool)
+    if unit_converter_enabled:
+        selected_tools.append(unit_converter_tool)
+    if time_enabled:
+        selected_tools.append(time_tool)
+    
+    # Format chat history for the prompt
+    formatted_history = format_chat_history(history)
     
     llm_bound = llm.bind_tools(selected_tools)
     agent = create_tool_calling_agent(llm=llm_bound, prompt=prompt, tools=selected_tools)
     agent_executor = AgentExecutor(agent=agent, tools=selected_tools, verbose=True, return_intermediate_steps=True)
     
     try:
-        response = agent_executor.invoke({"query": prompt_input})
+        response = agent_executor.invoke({"query": prompt_input, "chat_history": formatted_history})
         thoughts = format_intermediate_steps(response["intermediate_steps"])
+        # Parse the output to extract the structured response
         structured_response = parser.parse(response["output"])
-        summary = f"Response: {structured_response.response}\nTools Used: {', '.join(structured_response.tools_used) or 'None'}\nSources: {', '.join(structured_response.sources) or 'None'}"
+        # Format summary as Markdown
+        summary = f"**Response:** {structured_response.response}\n\n**Tools Used:** {', '.join(structured_response.tools_used) or 'None'}\n\n**Sources:** {', '.join(structured_response.sources) or 'None'}"
         print(f"Debug - Thoughts: {thoughts[:100]}...")
         print(f"Debug - Summary: {summary[:100]}...")
-        return thoughts, summary
+        # Update history
+        updated_history = history + [("human", prompt_input), ("assistant", structured_response.response)]
+        return thoughts, summary, updated_history
     except Exception as e:
         error_msg = f"Error during agent execution: {str(e)}"
         print(error_msg)
-        return error_msg, "No summary available due to error."
+        return error_msg, "No summary available due to error.", history
 
-
-with gr.Blocks(theme=gr.themes.Default(primary_hue=gr.themes.colors.red, secondary_hue=gr.themes.colors.pink)) as demo:
-    ...
-    gr.Markdown("# GPA-Qwen", elem_id="title")
+# Define the Gradio interface
+with gr.Blocks() as demo:
+    gr.Markdown("# GPA-Qwen Enhanced")
+    # State to store conversation history
+    history = gr.State(value=[])
     with gr.Row():
         with gr.Column():
             prompt_input = gr.Textbox(label="Enter your prompt", placeholder="Type your query here...")
@@ -118,15 +143,17 @@ with gr.Blocks(theme=gr.themes.Default(primary_hue=gr.themes.colors.red, seconda
                 save_cb = gr.Checkbox(label="Save", value=False)
                 calculator_cb = gr.Checkbox(label="Calculator", value=False)
                 content_generator_cb = gr.Checkbox(label="Content Generator", value=False)
+                unit_converter_cb = gr.Checkbox(label="Unit Converter", value=False)
+                time_cb = gr.Checkbox(label="Time Zone", value=False)
             submit_btn = gr.Button("Submit")
         with gr.Column():
             thoughts_output = gr.Textbox(label="Thoughts", lines=10)
-            summary_output = gr.Textbox(label="Summary", lines=10)
+            summary_output = gr.Markdown(label="Summary")
     
     submit_btn.click(
         run_agent,
-        inputs=[prompt_input, search_cb, wiki_cb, save_cb, calculator_cb, content_generator_cb],
-        outputs=[thoughts_output, summary_output]
+        inputs=[prompt_input, search_cb, wiki_cb, save_cb, calculator_cb, content_generator_cb, unit_converter_cb, time_cb, history],
+        outputs=[thoughts_output, summary_output, history]
     )
 
 # Launch the app
