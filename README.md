@@ -18,7 +18,7 @@ GPA-Qwen utilizes a variety of tools to enhance its functionality. These include
 - Save: For saving output or data.
 - Calculator: For performing mathematical calculations.
 - Content Generator: For creating content such as text, poems, and more.
-- 
+
 2. Customizable Output:
   
 Users can control which tools are used by GPA-Qwen through a checkbox interface. This allows for flexible task execution based on individual needs.
