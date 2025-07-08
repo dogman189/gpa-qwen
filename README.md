@@ -8,8 +8,8 @@ This project builds an AI-powered multitalented agent that leverages LangChain t
 
 1.  **Clone the Repository:**
     ```bash
-    git clone <repository_url>
-    cd <repository_directory>
+    git clone https://github.com/dogman189/gpa-qwen.git
+    cd gpa-qwen
     ```
 
 2.  **Create a Virtual Environment (Recommended):**
