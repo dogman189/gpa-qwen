@@ -2,10 +2,19 @@ import gradio as gr
 from dotenv import load_dotenv
 from langchain_openai import ChatOpenAI
 from langchain_core.prompts import ChatPromptTemplate
+from langchain_core.output_parsers import PydanticOutputParser
 from langchain.agents import create_tool_calling_agent, AgentExecutor
+from pydantic import BaseModel
 from tools import search_tool, wiki_tool, save_tool, calculator_tool, content_generator_tool
 
 load_dotenv()
+
+# Define the output model
+class TaskResponse(BaseModel):
+    query: str
+    response: str
+    tools_used: list[str]
+    sources: list[str] = []
 
 # Define the LLM
 llm = ChatOpenAI(
@@ -16,7 +25,10 @@ llm = ChatOpenAI(
     max_tokens=1000
 )
 
-# Define the prompt without input_variables
+# Define the parser
+parser = PydanticOutputParser(pydantic_object=TaskResponse)
+
+# Define the prompt
 prompt = ChatPromptTemplate.from_messages(
     [
         (
@@ -25,15 +37,16 @@ prompt = ChatPromptTemplate.from_messages(
             You are a versatile AI assistant capable of handling a wide range of tasks, including answering questions, performing calculations, generating content, and conducting research.
             Use the provided tools when necessary and tailor your response to the user's query.
             For research tasks, include sources if applicable.
+            Wrap the output in this format and provide no other text\n{format_instructions}
             """,
         ),
         ("placeholder", "{chat_history}"),
         ("human", "{query}"),
         ("placeholder", "{agent_scratchpad}"),
     ]
-)
+).partial(format_instructions=parser.get_format_instructions())
 
-# Debug: Verify prompt type and input variables
+# Debug: Verify prompt type
 print(f"Prompt type: {type(prompt)}")
 try:
     print(f"Input variables: {prompt.input_variables}")
@@ -52,6 +65,8 @@ tool_names = ["Search", "Wiki", "Save", "Calculator", "Content Generator"]
 
 # Function to format intermediate steps
 def format_intermediate_steps(steps):
+    if not steps:
+        return "No intermediate steps taken."
     formatted = ""
     for i, step in enumerate(steps, 1):
         action = step[0]
@@ -80,10 +95,16 @@ def run_agent(prompt_input, search_enabled, wiki_enabled, save_enabled, calculat
     try:
         response = agent_executor.invoke({"query": prompt_input})
         thoughts = format_intermediate_steps(response["intermediate_steps"])
-        summary = response["output"]
+        # Parse the output to extract the structured response
+        structured_response = parser.parse(response["output"])
+        summary = f"Response: {structured_response.response}\nTools Used: {', '.join(structured_response.tools_used) or 'None'}\nSources: {', '.join(structured_response.sources) or 'None'}"
+        print(f"Debug - Thoughts: {thoughts[:100]}...")  # Truncated for brevity
+        print(f"Debug - Summary: {summary[:100]}...")
         return thoughts, summary
     except Exception as e:
-        return f"Error during agent execution: {str(e)}", "No summary available due to error."
+        error_msg = f"Error during agent execution: {str(e)}"
+        print(error_msg)
+        return error_msg, "No summary available due to error."
 
 # Define the Gradio interface
 with gr.Blocks() as demo:
