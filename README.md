@@ -1,83 +1,93 @@
-**README**
+# General Purpose Agent(GPA) Qwen
 
-GPA-Qwen is an advanced AI assistant designed to help users with a wide range of tasks, including:
+## Overview
 
-- Answering questions.
-- Performing calculations.
-- Generating content.
-- Conducting research.
+This project builds an AI-powered multitalented agent that leverages LangChain to assist users in exploring topics and generating structured  outputs. It allows users to input research queries, and the agent will dynamically use various tools (search engine, Wikipedia, calculator, creativity and a text-saving functionality) to explore the topic and provide a structured response containing a summary, sources, and a record of tools used.  The output can also be saved to a text file.  The UI is built with Gradio.
 
-**Features:**
+## Installation
 
-1.Multi-Tool Support:
+1.  **Clone the Repository:**
+    ```bash
+    git clone <repository_url>
+    cd <repository_directory>
+    ```
 
-GPA-Qwen utilizes a variety of tools to enhance its functionality. These include:
+2.  **Create a Virtual Environment (Recommended):**
+    ```bash
+    python3 -m venv venv
+    source venv/bin/activate  # On Linux/macOS
+    # venv\Scripts\activate  # On Windows
+    ```
 
-- Search: For finding information online.
-- Wiki: For accessing comprehensive articles from Wikipedia.
-- Save: For saving output or data.
-- Calculator: For performing mathematical calculations.
-- Content Generator: For creating content such as text, poems, and more.
+3. **Install Dependencies:**
+    ```bash
+    pip install -r requirements.txt
+    ```
 
-2. Customizable Output:
-  
-Users can control which tools are used by GPA-Qwen through a checkbox interface. This allows for flexible task execution based on individual needs.
+4. **Environment Variables:**  The code uses environment variables for API keys.
 
-3. User-Friendly Interface:
+   *   **`API_KEY` (OpenAI):**  While currently configured to use Ollama, you might need to configure this depending on your OpenAI usage.  It may need to be changed to an OpenAI key if using a different LLM that requires it.
+    *   **Ensure that an instance of `qwen3:1.7b` is running locally with your LLM server, or is available.  In this example, the code defaults to `http://localhost:11434/v1`
 
-The application is built using Gradio, providing an intuitive and easy-to-use web interface. Users can input their queries directly into the text box and select the tools they want to use. The results and intermediate steps are displayed in real-time.
+## Usage
 
+1.  **Run the Gradio Interface:**
+    ```bash
+    python app.py
+    ```
 
-**Setup:**
+2.  **Access the Interface:**  Open your web browser and go to the address printed by the `gradio_interface`.  Typically, it will be something like `http://localhost:7860`.
 
-**Prerquisites**
+3.  **Enter a Research Query:**  Type your research question or topic into the text box, select your tools and click the "Submit" or similar button.
 
-- Python 3.8 or higher
-- Required libraries (found in requirements.txt)
+4.  **Review the Output:** The agent will generate a structured response containing:
+    *   **Topic:**  The researched topic.
+    *   **Summary:** A concise summary of the topic.
+    *   **Sources:** A list of sources used for research.
+    *   **Tools Used:** A record of the tools employed (e.g., search engine, Wikipedia).
 
-**Installation:**
+5. **Saving Research:**  The agent automatically saves the detailed research result to a file named `research_output.txt`. Each new result will be appended to the file with a timestamp.
 
-1. Clone the repository
-- 		git clone https://github.com/your-repo/gpa-qwen.git
-2. Navigate to the project directory:
-- 		cd gpa-qwen
-3. Create a virtual enviroment (if not done so)
+## Code Structure
 
-Windows:
-- 		python -m venv venv
-- 		.\venv\Scripts\activate
+The project is organized into the following modules:
 
-Linux/MacOS:
-- 		python3 -m venv venv
-- 		source /venv/bin/activate/
+*   **`app.py`**: This file contains the Gradio interface code for interacting with the research agent. It takes user input, passes it to the agent executor, and displays the output in a Gradio textbox.
+*   **`main.py`**:  This is the core logic of the research agent. It defines the research response schema, loads the LLM, sets up the prompt, and creates the agent executor.
+*   **`tools.py`**:  This module provides the tools used by the agent:
+    *   `save_text_to_file`: Saves the research output to a text file.
+    *   `search`:  Uses DuckDuckGo to search the web.
+    *   `wiki_tool`: Queries Wikipedia using Langchain.
+    *   `calculator_tool`: Uses a calculator algorithm to solve math problems.
+    *   `content_generator`: Makes creative content instead of structured responses.
 
-4. Install dependencies:
-- 		pip install -r requirements.txt
-5. Set up enviroment variables (if needed)
-- 		cp .env.example .env
+### Data Structures
 
-To run it simply run:
+*   **`ResearchResponse` (in `main.py`):** A Pydantic model that defines the structure of the research output.
 
-Windows:
+## Contributing
 
-		python app.py
+1.  **Fork the Repository:**  Create a fork of the repository on GitHub.
+2.  **Create a Branch:**  Create a new branch for your feature or bug fix.
+3.  **Make Changes:**  Commit your changes to the branch.
+4.  **Submit a Pull Request:**  Create a pull request to the main repository.
 
-Linux/MacOS:
+## Dependencies
 
-		python3 app.py
+The project relies on the following libraries:
 
-**Usage**
+*   `gradio`
+*   `python-dotenv`
+*   `langchain`
+*   `langchain-openai`
+*    `langchain-anthropic`
+*   `pydantic`
+*   `duckduckgo-search`
 
-1. Open your web browser and navigate to http://localhost:7860.
-2. Enter your query in the text box at the top of the page.
-3. Select any tools you want GPA-Qwen to use from the checkboxes below.
-4. Click the "Submit" button to execute the task.
-5. The results will be displayed in the "Summary" output box, along with intermediate steps and any applicable sources.
+See the `requirements.txt` file for the exact versions.
 
-**Contributing**
+## License
 
-Contributions are welcome! If you have any ideas for new features, bug fixes, or improvements, feel free to open an issue or submit a pull request.
+[Choose an appropriate license, e.g., MIT License]
 
-**License**
-
-This project is licensed under the CC0-1.0 License - see the LICENSE file for details.
+---
