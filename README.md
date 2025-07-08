@@ -29,7 +29,7 @@ The application is built using Gradio, providing an intuitive and easy-to-use we
 
 **Setup:**
 
-**Prerquisite:s**
+**Prerquisites**
 
 - Python 3.8 or higher
 - Required libraries (found in requirements.txt)
