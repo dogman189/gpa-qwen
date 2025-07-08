@@ -5,7 +5,8 @@ from datetime import datetime
 import math
 import os
 import traceback
-from langchain.tools import Tool
+import pandas as pd
+import json
 from googletrans import Translator
 from sympy import sympify
 import pint
@@ -16,16 +17,28 @@ import pytz
 def read_file(filepath: str) -> str:
     if not os.path.exists(filepath):
         return f"File not found: {filepath}"
+    
     try:
-        with open(filepath, "r", encoding="utf-8") as file:
-            return file.read()
+        file_extension = os.path.splitext(filepath)[1].lower()
+        if file_extension == ".txt" or file_extension == ".md" or file_extension == ".py" or file_extension == ".html":
+            with open(filepath, "r", encoding="utf-8") as file:
+                return file.read()
+        elif file_extension == ".csv":
+            df = pd.read_csv(filepath)
+            return df.to_string()
+        elif file_extension == ".json":
+            with open(filepath, "r", encoding="utf-8") as file:
+                data = json.load(file)
+                return json.dumps(data, indent=2)
+        else:
+            return f"Unsupported file type: {file_extension}. Supported types: .txt, .csv, .json, .md, .py, .html"
     except Exception as e:
         return f"Error reading file: {str(e)}"
 
 file_reader_tool = Tool(
     name="FileReader",
     func=read_file,
-    description="Reads and returns the contents of a text file. Input should be a valid file path."
+    description="Reads and returns the contents of a text-based file (.txt, .csv, .json, .md, .py, .html). Input should be a valid file path."
 )
 
 # 4. Code Execution Tool
@@ -43,7 +56,8 @@ code_execution_tool = Tool(
     description="Executes a block of Python code and returns output variables or errors."
 )
 
-# 5. Translation Tool
+
+# 6. Translation Tool
 translator = Translator()
 
 def translate_text(text: str, target_language: str = "en") -> str:
@@ -56,9 +70,8 @@ def translate_text(text: str, target_language: str = "en") -> str:
 translation_tool = Tool(
     name="Translator",
     func=lambda x: translate_text(x),
-    description="Translates text into English. Input should be text in any language."
+    description="Translates text into English or a specified language (e.g., 'es' for Spanish). Input format: 'text' or 'text, target_language'."
 )
-
 
 # Initialize pint unit registry
 ureg = pint.UnitRegistry()
@@ -107,43 +120,43 @@ def get_time(timezone: str) -> str:
 save_tool = Tool(
     name="save_text_to_file",
     func=save_to_txt,
-    description="Saves task output to a text file.",
+    description="Saves task output to a text file."
 )
 
 search_tool = Tool(
     name="search",
     func=DuckDuckGoSearchRun().run,
-    description="Search the web for information",
+    description="Search the web for information"
 )
 
 wiki_tool = Tool(
     name="wiki",
     func=WikipediaQueryRun(api_wrapper=WikipediaAPIWrapper(top_k_results=1, doc_content_chars_max=100000)).run,
-    description="Query Wikipedia for information",
+    description="Query Wikipedia for information"
 )
 
 calculator_tool = Tool(
     name="calculator",
     func=calculate,
-    description="Perform mathematical calculations including symbolic math using SymPy, e.g., 'solve x^2 - 4 = 0' or 'diff(x^2, x)'",
+    description="Perform mathematical calculations including symbolic math using SymPy, e.g., 'solve x^2 - 4 = 0' or 'diff(x^2, x)'"
 )
 
 content_generator_tool = Tool(
     name="content_generator",
     func=generate_content,
-    description="Generate creative content based on a given prompt",
+    description="Generate creative content based on a given prompt"
 )
 
 unit_converter_tool = Tool(
     name="unit_converter",
     func=convert_units,
-    description="Convert between units. Provide input like '10 km to miles'.",
+    description="Convert between units. Provide input like '10 km to miles'."
 )
 
 time_tool = Tool(
     name="time_zone",
     func=get_time,
-    description="Get current time in a specified time zone, e.g., 'America/New_York'.",
+    description="Get current time in a specified time zone, e.g., 'America/New_York'."
 )
 
 import asyncio

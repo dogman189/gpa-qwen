@@ -193,20 +193,26 @@ with gr.Blocks(theme=custom_theme, css=".gradio-container {max-width: 1200px; ma
                 lines=5,
                 show_label=True
             )
-            with gr.Accordion("Select Tools", open=False):
+            with gr.Accordion("Tools",open=False):
                 with gr.Row():
-                    with gr.Column(scale=1):
-                        search_cb = gr.Checkbox(label="Search", value=False, info="Search the web for information")
-                        wiki_cb = gr.Checkbox(label="Wiki", value=False, info="Query Wikipedia for details")
-                        save_cb = gr.Checkbox(label="Save", value=False, info="Save output to a text file")
-                        content_generator_cb = gr.Checkbox(label="Content Generator", value=False, info="Generate creative content")
-                        calculator_cb = gr.Checkbox(label="Calculator", value=False, info="Perform mathematical calculations")
-                        unit_converter_cb = gr.Checkbox(label="Unit Converter", value=False, info="Convert between units")
-                        time_cb = gr.Checkbox(label="Time Zone", value=False, info="Get time in a specific timezone")
-                        file_reader_cb = gr.Checkbox(label="File Reader", value=False, info="Read contents of an uploaded file")
-                        code_executor_cb = gr.Checkbox(label="Code Executor", value=False, info="Execute Python code")
-                        translator_cb = gr.Checkbox(label="Translator", value=False, info="Translate text to English or specified language")
-                file_upload = gr.File(label="Upload File for File Reader", file_types=[".txt"], visible=True)
+                    with gr.Accordion("Research and Creativity", open=False):
+                        with gr.Row():
+                            with gr.Column(scale=1):
+                                search_cb = gr.Checkbox(label="Search", value=False, info="Search the web for information")
+                                wiki_cb = gr.Checkbox(label="Wiki", value=False, info="Query Wikipedia for details")
+                                save_cb = gr.Checkbox(label="Save", value=False, info="Save output to a text file")
+                                content_generator_cb = gr.Checkbox(label="Content Generator", value=False, info="Generate creative content")
+                                
+                    with gr.Accordion("Utilities", open=False):
+                        with gr.Row():
+                                calculator_cb = gr.Checkbox(label="Calculator", value=False, info="Perform mathematical calculations")
+                                unit_converter_cb = gr.Checkbox(label="Unit Converter", value=False, info="Convert between units")
+                                time_cb = gr.Checkbox(label="Time Zone", value=False, info="Get time in a specific timezone")
+                                file_reader_cb = gr.Checkbox(label="File Reader", value=False, info="Read contents of an uploaded file")
+                                code_executor_cb = gr.Checkbox(label="Code Executor", value=False, info="Execute Python code")
+                                translator_cb = gr.Checkbox(label="Translator", value=False, info="Translate text to English or specified language")
+                with gr.Row():
+                    file_upload = gr.File(label="Upload File for File Reader", file_types=[".txt"], visible=True)
             
             with gr.Row():
                 submit_btn = gr.Button("Submit", variant="primary")
