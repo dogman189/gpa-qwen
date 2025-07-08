@@ -108,7 +108,7 @@ def run_agent(prompt_input, search_enabled, wiki_enabled, save_enabled, calculat
 
 # Define the Gradio interface
 with gr.Blocks() as demo:
-    gr.Markdown("# AI Assistant")
+    gr.Markdown("# GPA-Qwen")
     with gr.Row():
         with gr.Column():
             prompt_input = gr.Textbox(label="Enter your prompt", placeholder="Type your query here...")
