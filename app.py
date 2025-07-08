@@ -122,7 +122,7 @@ def run_agent(prompt_input, search_enabled, wiki_enabled, save_enabled, calculat
         # Parse the output to extract the structured response
         structured_response = parser.parse(response["output"])
         # Format summary as Markdown
-        summary = f"**Response:** {structured_response.response}\n\n**Tools Used:** {', '.join(structured_response.tools_used) or 'None'}\n\n**Sources:** {', '.join(structured_response.sources) or 'None'}"
+        summary = f"Response: {structured_response.response}\n\nTools Used: {', '.join(structured_response.tools_used) or 'None'}\n\nSources: {', '.join(structured_response.sources) or 'None'}"
         print(f"Debug - Thoughts: {thoughts[:100]}...")
         print(f"Debug - Summary: {summary[:100]}...")
         # Update history
@@ -150,25 +150,29 @@ def run_agent(prompt_input, search_enabled, wiki_enabled, save_enabled, calculat
         return error_msg, "No summary available due to error.", history
 
 # Define the Gradio interface
+# Define the Gradio interface
 with gr.Blocks() as demo:
     gr.Markdown("# GPA-Qwen Enhanced")
     # State to store conversation history
     history = gr.State(value=[])
     with gr.Row():
-        with gr.Column():
-            prompt_input = gr.Textbox(label="Enter your prompt", placeholder="Type your query here...")
-            with gr.Row():
-                search_cb = gr.Checkbox(label="Search", value=False)
-                wiki_cb = gr.Checkbox(label="Wiki", value=False)
-                save_cb = gr.Checkbox(label="Save", value=False)
-                calculator_cb = gr.Checkbox(label="Calculator", value=False)
-                content_generator_cb = gr.Checkbox(label="Content Generator", value=False)
-                unit_converter_cb = gr.Checkbox(label="Unit Converter", value=False)
-                time_cb = gr.Checkbox(label="Time Zone", value=False)
+        with gr.Column(scale=1):  # Left column for input and controls
+            prompt_input = gr.Textbox(label="Prompt", placeholder="Type your query here...", lines=3)
+            gr.Markdown("### Tools")
+            with gr.Row():  # Two-column grid for checkboxes
+                with gr.Column(scale=1):  # First column for research-related tools
+                    search_cb = gr.Checkbox(label="Search", value=False)
+                    wiki_cb = gr.Checkbox(label="Wiki", value=False)
+                    save_cb = gr.Checkbox(label="Save", value=False)
+                    content_generator_cb = gr.Checkbox(label="Content Generator", value=False)
+                with gr.Column(scale=1):  # Second column for utility tools
+                    calculator_cb = gr.Checkbox(label="Calculator", value=False)
+                    unit_converter_cb = gr.Checkbox(label="Unit Converter", value=False)
+                    time_cb = gr.Checkbox(label="Time Zone", value=False)
             submit_btn = gr.Button("Submit")
-        with gr.Column():
-            thoughts_output = gr.Textbox(label="Thoughts", lines=5)
-            summary_output = gr.Textbox(label="Summary", lines=5)
+        with gr.Column(scale=2):  # Right column for output, wider for readability
+            thoughts_output = gr.Textbox(label="Thoughts", lines=10)
+            summary_output = gr.Textbox(label="Summary", lines=10)
     
     submit_btn.click(
         run_agent,
