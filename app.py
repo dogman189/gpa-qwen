@@ -8,6 +8,12 @@ from langchain.agents import create_tool_calling_agent, AgentExecutor
 from pydantic import BaseModel
 from typing import List, Tuple
 from tools import search_tool, wiki_tool, save_tool, calculator_tool, content_generator_tool, unit_converter_tool, time_tool, file_reader_tool, code_execution_tool, translation_tool
+
+from typing import Iterable
+import gradio as gr
+from gradio.themes.base import Base
+from gradio.themes.utils import colors, fonts, sizes
+import time
 import re
 
 load_dotenv()
@@ -150,33 +156,29 @@ def run_agent(prompt_input, search_cb, wiki_cb, save_cb, calculator_cb, content_
         updated_history = history + [("human", prompt_input), ("assistant", structured_response.response)]
         return thoughts, summary, updated_history
     except Exception as e:
-        error_msg = f"Error during agent execution: {str(e)}\nRaw output: {response['output'] if 'response' in locals() else 'No response'}"
+        error_msg = f"Error during agent execution: {str(e)}\nRaw output: {response['output']}"
         print(error_msg)
         return error_msg, "No summary available due to error.", history
 
 def clear_inputs():
     return "", False, False, False, False, False, False, False, False, False, False, None, []
 
-# Define custom Gradio theme
-custom_theme = gr.themes.Soft(
-    primary_hue="teal",
-    secondary_hue="gray",
-    neutral_hue="slate",
-    font=["inter", "helvetica"],
-    radius_size="md",
-    spacing_size="md",
-    text_size="lg"
+# Define custom Gradio themeß
+theme = gr.themes.Soft(
+    primary_hue="yellow",
+    secondary_hue="green",
+    neutral_hue="sky",
+    text_size="lg",
+    spacing_size="lg",
+    radius_size="xxl",
+    font=['Montserrat'],
+    font_mono=['IBM Plex Mono'],
 ).set(
-    body_background_fill="*neutral_50",
-    block_background_fill="*neutral_100",
-    button_primary_background_fill="*primary_500",
-    button_primary_text_color="white",
-    input_background_fill="*neutral_200",
-    shadow_drop="rgba(0,0,0,0.1) 0px 4px 12px"
+    shadow_drop='*button_primary_shadow_hover'
 )
 
 # Define the Gradio interface
-with gr.Blocks(theme=custom_theme, css=".gradio-container {max-width: 1200px; margin: auto;}") as demo:
+with gr.Blocks(theme=theme) as demo:
     gr.Markdown(
         """
         # GPA-Qwen Enhanced
@@ -193,25 +195,23 @@ with gr.Blocks(theme=custom_theme, css=".gradio-container {max-width: 1200px; ma
                 lines=5,
                 show_label=True
             )
-            with gr.Accordion("Tools",open=False):
-                with gr.Row():
-                    with gr.Accordion("Research and Creativity", open=False):
-                        with gr.Row():
-                            with gr.Column(scale=1):
-                                search_cb = gr.Checkbox(label="Search", value=False, info="Search the web for information")
-                                wiki_cb = gr.Checkbox(label="Wiki", value=False, info="Query Wikipedia for details")
-                                save_cb = gr.Checkbox(label="Save", value=False, info="Save output to a text file")
-                                content_generator_cb = gr.Checkbox(label="Content Generator", value=False, info="Generate creative content")
+            with gr.Accordion("Research and Creativity", open=False):
+                    with gr.Row():
+                        with gr.Column(scale=1):
+                            search_cb = gr.Checkbox(label="Search", value=False, info="Search the web for information")
+                            wiki_cb = gr.Checkbox(label="Wiki", value=False, info="Query Wikipedia for details")
+                            save_cb = gr.Checkbox(label="Save", value=False, info="Save output to a text file")
+                            content_generator_cb = gr.Checkbox(label="Content Generator", value=False, info="Generate creative content")
                                 
-                    with gr.Accordion("Utilities", open=False):
-                        with gr.Row():
-                                calculator_cb = gr.Checkbox(label="Calculator", value=False, info="Perform mathematical calculations")
-                                unit_converter_cb = gr.Checkbox(label="Unit Converter", value=False, info="Convert between units")
-                                time_cb = gr.Checkbox(label="Time Zone", value=False, info="Get time in a specific timezone")
-                                file_reader_cb = gr.Checkbox(label="File Reader", value=False, info="Read contents of an uploaded file")
-                                code_executor_cb = gr.Checkbox(label="Code Executor", value=False, info="Execute Python code")
-                                translator_cb = gr.Checkbox(label="Translator", value=False, info="Translate text to English or specified language")
-                with gr.Row():
+            with gr.Accordion("Utilities", open=False):
+                    with gr.Row():
+                            calculator_cb = gr.Checkbox(label="Calculator", value=False, info="Perform mathematical calculations")
+                            unit_converter_cb = gr.Checkbox(label="Unit Converter", value=False, info="Convert between units")
+                            time_cb = gr.Checkbox(label="Time Zone", value=False, info="Get time in a specific timezone")
+                            file_reader_cb = gr.Checkbox(label="File Reader", value=False, info="Read contents of an uploaded file")
+                            code_executor_cb = gr.Checkbox(label="Code Executor", value=False, info="Execute Python code")
+                            translator_cb = gr.Checkbox(label="Translator", value=False, info="Translate text to English or specified language")
+            with gr.Row():
                     file_upload = gr.File(label="Upload File for File Reader", file_types=[".txt"], visible=True)
             
             with gr.Row():
