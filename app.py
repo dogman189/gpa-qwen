@@ -21,9 +21,9 @@ class TaskResponse(BaseModel):
 
 # Define the LLM
 llm = ChatOpenAI(
-    api_key="ollama",
-    model="qwen3:latest",
-    base_url="http://localhost:11434/v1",
+    api_key="none-needed",
+    model="qwen/qwen3-1.7b",
+    base_url="http://127.0.0.1:1234/v1",
     temperature=0.5,
     max_tokens=1000
 )
