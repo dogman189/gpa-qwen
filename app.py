@@ -28,7 +28,7 @@ class TaskResponse(BaseModel):
 # Define the LLM
 llm = ChatOpenAI(
     api_key="none-needed",
-    model="qwen/qwen3-1.7b",
+    model="qwen/qwen3-4b-thinking-2507",
     base_url="http://127.0.0.1:1234/v1",
     temperature=0.5,
     max_tokens=1000
@@ -99,10 +99,14 @@ def format_intermediate_steps(steps):
     return formatted
 
 def extract_json(text):
-    match = re.search(r'\{.*\}', text, re.DOTALL)  # Find the JSON object
+    # Strip out <think> and similar artifacts
+    text = re.sub(r"<think>.*?</think>", "", text, flags=re.DOTALL).strip()
+    # Find JSON object
+    match = re.search(r'\{.*\}', text, re.DOTALL)
     if match:
-        return match.group(0)  # Return only the JSON part
-    return text  # Fallback to original text if no JSON is found
+        return match.group(0)
+    raise ValueError("No valid JSON found in model output")
+
 
 from langchain_core.messages import HumanMessage, AIMessage
 
@@ -171,11 +175,12 @@ theme = gr.themes.Soft(
     text_size="lg",
     spacing_size="lg",
     radius_size="xxl",
-    font=['Montserrat'],
-    font_mono=['IBM Plex Mono'],
+    font="IBM Plex Sans, sans-serif",
+    font_mono="IBM Plex Mono, monospace",
 ).set(
     shadow_drop='*button_primary_shadow_hover'
 )
+
 
 # Define the Gradio interface
 with gr.Blocks(theme=theme) as demo:

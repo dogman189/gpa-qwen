@@ -11,3 +11,4 @@ googletrans
 sympy
 pint
 pytz
+ddgs
